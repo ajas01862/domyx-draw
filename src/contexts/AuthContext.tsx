@@ -30,10 +30,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session, user: session?.user ?? null, profile, loading, configured: isSupabaseConfigured,
     signOut: async () => { if (supabase) await supabase.auth.signOut(); },
     signInWithGoogle: async () => {
-      if (!supabase) throw new Error('Supabase is not configured.');
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } });
-      if (error) throw error;
+  if (!supabase) throw new Error('Supabase is not configured.');
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}`,
     },
+  });
+
+  if (error) throw error;
+},
   }), [session, profile, loading]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
