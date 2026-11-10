@@ -1,0 +1,16 @@
+project_id = "domyx-draw"
+
+[functions.create-draw]
+verify_jwt = true
+
+[functions.execute-draw]
+verify_jwt = true
+
+[functions.verify-draw]
+verify_jwt = true
+
+[functions.register-event]
+verify_jwt = true
+
+[functions.join-room]
+verify_jwt = true

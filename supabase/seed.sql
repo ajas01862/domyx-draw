@@ -1,0 +1,2 @@
+-- Free and Premium plans are inserted by the initial schema migration.
+-- Add non-sensitive development seed data here only.
