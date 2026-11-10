@@ -33,14 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authEventReceived = useRef(false);
 
   useEffect(() => {
-    if (!supabase) {
-      setAuthLoading(false);
-      return;
-    }
+if (!supabase) {
+  setAuthLoading(false);
+  return;
+}
 
-    let active = true;
+const client = supabase;
+let active = true;
 
-    const { data: listener } = supabase.auth.onAuthStateChange(
+const { data: listener } = client.auth.onAuthStateChange(
       (_event, nextSession) => {
         authEventReceived.current = true;
 
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const restoreSession = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        const { data, error } = await client.auth.getSession();
 
         if (error) throw error;
 
@@ -86,13 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+	const client = supabase;
     let active = true;
 
     setProfileLoading(true);
 
     const loadProfile = async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await client
           .from('profiles')
           .select('id,username,full_name,avatar_url,is_admin')
           .eq('id', session.user.id)
