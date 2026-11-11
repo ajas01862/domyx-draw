@@ -36,5 +36,9 @@ Deno.serve(async (req) => {
     if (secretError) { await client.from('draws').delete().eq('id', draw.id); throw secretError; }
     await client.from('draw_audit_logs').insert({ draw_id: draw.id, actor_id: user.id, action: 'draw_created', details: { participant_count: normalized.length, winner_count: winnerCount, snapshot_hash: snapshotHash, seed_commitment: commitment } });
     return Response.json({ draw_id: draw.id, participant_count: normalized.length, snapshot_hash: snapshotHash, seed_commitment: commitment }, { headers: corsHeaders });
-  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : 'Unexpected error.' }, { status: 400, headers: corsHeaders }); }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected error.';
+    console.error('create-draw failed:', message, error);
+    return Response.json({ error: message }, { status: 400, headers: corsHeaders });
+  }
 });

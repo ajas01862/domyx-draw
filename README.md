@@ -10,17 +10,18 @@ Domyx Draw is a React + TypeScript platform foundation for random draws, events,
 - Vanilla CSS (no Tailwind)
 - Supabase Auth, PostgreSQL, RLS, Realtime and Edge Functions
 - GitHub Actions and GitHub Pages
-- React Router hash URLs (`/#/dashboard`) for direct links and refresh support on GitHub Pages
+- React Router browser URLs with a GitHub Pages `404.html` fallback for direct links and refresh support
 
 ## 1. Create and configure Supabase
 
 1. Create a project at [Supabase](https://supabase.com/).
 2. Open **Project Settings → API** and copy the Project URL and anon/publishable key.
 3. In **SQL Editor**, run `supabase/migrations/202611100001_initial_schema.sql`.
-4. Confirm the migration completed and the tables and RLS policies exist.
-5. In **Authentication → URL Configuration**, add your local and production redirect URLs, such as `http://localhost:5173/**` and `https://YOUR_GITHUB_USERNAME.github.io/**`.
-6. In **Authentication → Providers → Google**, enable Google and configure the OAuth client ID/secret and callback URL shown by Supabase.
-7. In **Authentication → Providers → Email**, keep email confirmation enabled for a public launch.
+4. Then run `supabase/migrations/202611110001_fix_draw_completion.sql` to install the corrected atomic draw-completion function.
+5. Confirm both migrations completed and the tables, function and RLS policies exist.
+6. In **Authentication → URL Configuration**, add your local and production redirect URLs, such as `http://localhost:5173/**` and `https://YOUR_GITHUB_USERNAME.github.io/**`.
+7. In **Authentication → Providers → Google**, enable Google and configure the OAuth client ID/secret and callback URL shown by Supabase.
+8. In **Authentication → Providers → Email**, keep email confirmation enabled for a public launch.
 
 The auth trigger creates a profile, personal workspace, owner membership and free subscription for each new account. Guest users can register for public/unlisted events without an account. Guests cannot create or manage draws.
 
@@ -87,7 +88,7 @@ Supabase supplies `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE
    - `VITE_APP_URL` (optional)
 5. Push to `main` or manually run **Build and deploy to GitHub Pages**.
 
-Vite derives the repository subpath from `GITHUB_REPOSITORY` during Actions builds. Hash routing means GitHub Pages does not require server-side rewrite support.
+Vite derives the repository subpath from `GITHUB_REPOSITORY` during Actions builds. The Pages workflow copies `dist/index.html` to `dist/404.html` so browser-history routes can recover on refresh.
 
 ## 5. Grant administrator access
 
@@ -111,6 +112,8 @@ Never expose a client-side control for `is_admin`. The profile update policy pre
 - Server-side cryptographic random source, weighted entries and no duplicate winners within one draw.
 - Participant snapshot hash and seed commitment/reveal records.
 - Draw result persistence and audit log records.
+- Draw history with winner records and verification metadata.
+- Independent verification of the seed commitment, participant snapshot hash and deterministic weighted winner selection.
 - Public/unlisted event creation and shareable event links.
 - Guest event registration through an Edge Function.
 - Protected admin overview and platform counts.
@@ -121,7 +124,6 @@ Never expose a client-side control for `is_admin`. The profile update policy pre
 - Live-room host UI, room creation and realtime viewer experience. Schema and guest join function are foundations only.
 - YouTube/Instagram/Facebook comment imports. These require provider credentials, scopes, review/approval and compliant API access.
 - Premium checkout, billing webhooks and automatic entitlement lifecycle. Plan records are foundations only.
-- Full independent draw replay verification. The current verification endpoint checks the revealed seed against its commitment and returns snapshot/winner data; a versioned replay verifier is required before making strong verifiability claims.
 - Rate limiting, CAPTCHA/abuse prevention, storage policies, automated backups, monitoring and full security test coverage.
 
 ## Security and launch checklist
