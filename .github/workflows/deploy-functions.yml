@@ -44,8 +44,8 @@ jobs:
             exit 1
           fi
 
-          supabase functions deploy create-draw --project-ref "$PROJECT_REF"
-          supabase functions deploy execute-draw --project-ref "$PROJECT_REF"
-          supabase functions deploy verify-draw --project-ref "$PROJECT_REF"
-          supabase functions deploy register-event --project-ref "$PROJECT_REF"
-          supabase functions deploy join-room --project-ref "$PROJECT_REF"
+          supabase functions deploy create-draw --project-ref "$PROJECT_REF" --yes
+          supabase functions deploy execute-draw --project-ref "$PROJECT_REF" --yes
+          supabase functions deploy verify-draw --project-ref "$PROJECT_REF" --yes
+          supabase functions deploy register-event --project-ref "$PROJECT_REF" --yes
+          supabase functions deploy join-room --project-ref "$PROJECT_REF" --yes
