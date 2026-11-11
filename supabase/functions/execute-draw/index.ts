@@ -51,5 +51,17 @@ Deno.serve(async (req) => {
     const { error: completeError } = await client.rpc('complete_draw_transaction', { p_draw_id: drawId, p_entry_ids: selected.map((entry) => entry.id), p_seed_reveal: secret.seed, p_actor_id: user.id });
     if (completeError) throw completeError;
     return Response.json({ draw_id: drawId, winners: selected.map((entry) => ({ display_name: entry.display_name })), seed_commitment: draw.seed_commitment, seed_reveal: secret.seed, snapshot_hash: draw.snapshot_hash }, { headers: corsHeaders });
-  } catch (error) { return Response.json({ error: error instanceof Error ? error.message : 'Unexpected error.' }, { status: 400, headers: corsHeaders }); }
+  } catch (error) {
+  const message = error instanceof Error ? error.message : 'Unexpected error.';
+
+  console.error('execute-draw failed:', message, error);
+
+  return Response.json(
+    { error: message },
+    {
+      status: 400,
+      headers: corsHeaders,
+    },
+  );
+}
 });
