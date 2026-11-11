@@ -19,3 +19,4 @@
           supabase functions deploy verify-draw --project-ref "$PROJECT_REF"
           supabase functions deploy register-event --project-ref "$PROJECT_REF"
           supabase functions deploy join-room --project-ref "$PROJECT_REF"
+
