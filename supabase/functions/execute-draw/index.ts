@@ -43,14 +43,14 @@ Deno.serve(async (req) => {
     const { data: membership } = await client.from('workspace_members').select('role').eq('workspace_id', draw.workspace_id).eq('user_id', user.id).maybeSingle();
     if (!membership || !['owner', 'admin', 'organizer'].includes(membership.role)) throw new Error('You are not allowed to execute this draw.');
     if (draw.status !== 'ready') throw new Error('Only a ready draw can be executed.');
-    const [{ data: entries, error: entriesError }, { data: secret, error: secretError }] = await Promise.all([client.from('draw_entries').select('id,display_name,weight').eq('draw_id', drawId).eq('eligible', true), client.from('draw_secrets').select('seed').eq('draw_id', drawId).single()]);
+    const [{ data: entries, error: entriesError }, { data: secret, error: secretError }] = await Promise.all([client.from('draw_entries').select('id,entry_key,display_name,weight').eq('draw_id', drawId).eq('eligible', true), client.from('draw_secrets').select('seed').eq('draw_id', drawId).single()]);
     if (entriesError || secretError || !entries || !secret) throw new Error('Draw snapshot or secret is unavailable.');
     if (entries.length < 2 || draw.winner_count >= entries.length) throw new Error('The draw does not have enough eligible entries.');
     const randomInt = createRandomSource(secret.seed);
     const selected = await chooseWeighted(entries.map((entry) => ({ ...entry, weight: Number(entry.weight) })), draw.winner_count, randomInt);
     const { error: completeError } = await client.rpc('complete_draw_transaction', { p_draw_id: drawId, p_entry_ids: selected.map((entry) => entry.id), p_seed_reveal: secret.seed, p_actor_id: user.id });
     if (completeError) throw completeError;
-    return Response.json({ draw_id: drawId, winners: selected.map((entry) => ({ display_name: entry.display_name })), seed_commitment: draw.seed_commitment, seed_reveal: secret.seed, snapshot_hash: draw.snapshot_hash }, { headers: corsHeaders });
+    return Response.json({ draw_id: drawId, winners: selected.map((entry) => ({ entry_key: entry.entry_key, display_name: entry.display_name })), seed_commitment: draw.seed_commitment, seed_reveal: secret.seed, snapshot_hash: draw.snapshot_hash }, { headers: corsHeaders });
   } catch (error) {
   const message = error instanceof Error ? error.message : 'Unexpected error.';
 

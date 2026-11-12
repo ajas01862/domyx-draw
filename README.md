@@ -147,3 +147,9 @@ Never expose a client-side control for `is_admin`. The profile update policy pre
 - GitHub Pages serves static assets only. Privileged operations belong in Supabase Edge Functions or database functions.
 - Chitty is a recordkeeping/group-management tool. It does not collect, hold, transfer or distribute money.
 - No payment provider is configured by default.
+
+## Chitty manager upgrade (November 2026)
+
+The Chitty manager now supports separate member name and phone fields, monthly round scheduling, per-round contribution tracking, payment status updates, a server-audited monthly draw, payout history, and automatic exclusion of members who have already received a payout in the same group. Monthly draws require all active members' contributions for the current round to be marked paid. Winner selection uses the existing `create-draw` and `execute-draw` Edge Functions; the selected entry key is the member UUID, avoiding ambiguous matching when members share a name.
+
+Before deploying this update, run `supabase/migrations/202611120001_chitty_allocation_permissions.sql` in the Supabase SQL Editor. Then deploy the updated `execute-draw` Edge Function and publish the frontend. The migration adds a transactional round-completion RPC and workspace-scoped allocation management; it does not disable RLS.

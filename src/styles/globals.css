@@ -25,3 +25,20 @@
 .plan-card { display: flex; flex-direction: column; gap: 14px; }
 .plan-card h2 { margin: 0; }
 @media (max-width: 640px) { .inline-form { align-items: stretch; flex-direction: column; } .inline-form > * { width: 100%; } }
+
+/* Chitty manager */
+.chitty-page { gap: 22px; }
+.chitty-member-form { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 14px; align-items: end; margin-bottom: 20px; }
+.chitty-member-form label { display: grid; gap: 8px; min-width: 0; color: var(--text-secondary, #a1a1aa); font-size: 13px; font-weight: 600; }
+.chitty-member-form input { width: 100%; min-width: 0; }
+.phone-input { display: flex; align-items: center; gap: 9px; min-width: 0; padding-left: 12px; border: 1px solid var(--border, rgba(255,255,255,.12)); border-radius: 10px; background: var(--surface, rgba(255,255,255,.04)); color: var(--text-secondary, #a1a1aa); }
+.phone-input input { border: 0; background: transparent; box-shadow: none; }
+.chitty-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 14px 0; }
+.chitty-metrics > div { display: grid; gap: 6px; min-width: 0; padding: 14px; border: 1px solid var(--border, rgba(255,255,255,.1)); border-radius: 12px; background: rgba(255,255,255,.025); }
+.chitty-metrics span { color: var(--text-secondary, #a1a1aa); font-size: 12px; }
+.chitty-metrics strong { overflow-wrap: anywhere; font-size: 16px; }
+.chitty-draw-action { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; padding: 18px; border: 1px solid var(--border, rgba(255,255,255,.12)); border-radius: 14px; background: rgba(255,255,255,.025); }
+.chitty-draw-action h3 { margin: 5px 0; }
+.chitty-draw-action p { margin: 0; color: var(--text-secondary, #a1a1aa); font-size: 13px; }
+.chitty-page .activity-info strong { display: flex; align-items: center; gap: 7px; }
+@media (max-width: 720px) { .chitty-member-form { grid-template-columns: 1fr; } .chitty-member-form .button { width: 100%; } .chitty-metrics { grid-template-columns: 1fr; } .chitty-draw-action { align-items: stretch; flex-direction: column; } .chitty-draw-action .button { width: 100%; } }
