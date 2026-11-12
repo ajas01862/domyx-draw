@@ -6,20 +6,19 @@ import { useAuth } from '../contexts/AuthContext';
 import { Modal } from '../components/Modal';
 import { formatDate, slugify } from '../lib/utils';
 import type { EventRecord } from '../types';
+import { getCurrentWorkspaceId } from '../lib/workspace';
 
 export function Events() {
   const { user } = useAuth(); const [events, setEvents] = useState<EventRecord[]>([]); const [loading, setLoading] = useState(true); const [showModal, setShowModal] = useState(false); const [title, setTitle] = useState(''); const [description, setDescription] = useState(''); const [visibility, setVisibility] = useState('public'); const [startsAt, setStartsAt] = useState(''); const [error, setError] = useState(''); const [busy, setBusy] = useState(false);
-  const load = async () => { if (!supabase) { setLoading(false); return; } const { data, error: loadError } = await supabase.from('events').select('id,title,slug,description,status,visibility,starts_at,created_at').order('created_at', { ascending: false }); if (loadError) setError(loadError.message); else setEvents((data || []) as EventRecord[]); setLoading(false); };
+  const load = async () => { if (!supabase || !user) { setLoading(false); return; } try { const workspaceId = await getCurrentWorkspaceId(user.id); const { data, error: loadError } = await supabase.from('events').select('id,title,slug,description,status,visibility,starts_at,created_at').eq('workspace_id', workspaceId).order('created_at', { ascending: false }); if (loadError) throw loadError; setEvents((data || []) as EventRecord[]); setError(''); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Could not load events.'); setEvents([]); } finally { setLoading(false); } };
   useEffect(() => { void load(); }, [user]);
   const create = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setBusy(true); setError('');
     if (!supabase || !user) { setError('Sign in to create an event.'); setBusy(false); return; }
     try {
-      const { data: workspace, error: workspaceError } = await supabase.from('workspaces').select('id').limit(1).maybeSingle();
-      if (workspaceError) throw workspaceError;
-      if (!workspace) throw new Error('Workspace not found. Check the migration and sign in again.');
+      const workspaceId = await getCurrentWorkspaceId(user.id);
       const slug = `${slugify(title)}-${crypto.randomUUID().slice(0, 6)}`;
-      const { error: insertError } = await supabase.from('events').insert({ workspace_id: workspace.id, created_by: user.id, title, description, slug, visibility, status: 'published', starts_at: startsAt ? new Date(startsAt).toISOString() : null });
+      const { error: insertError } = await supabase.from('events').insert({ workspace_id: workspaceId, created_by: user.id, title, description, slug, visibility, status: 'published', starts_at: startsAt ? new Date(startsAt).toISOString() : null });
       if (insertError) throw insertError;
       setShowModal(false); setTitle(''); setDescription(''); setStartsAt(''); await load();
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Could not create event.'); } finally { setBusy(false); }

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatDate } from '../lib/utils';
 import { useAuth } from '../contexts/AuthContext';
+import { getCurrentWorkspaceId } from '../lib/workspace';
 
 type HistoryDraw = {
   id: string;
@@ -35,10 +36,18 @@ export function DrawHistory() {
       return;
     }
     setLoading(true);
-    const { data, error: queryError } = await supabase.from('draws').select('id,title,draw_type,status,participant_count,winner_count,snapshot_hash,seed_commitment,seed_reveal,created_at,completed_at,draw_winners(id,position,selected_at,draw_entries(display_name,entry_key))').order('created_at', { ascending: false }).limit(100);
-    if (queryError) setError(queryError.message);
-    else setItems((data || []) as unknown as HistoryDraw[]);
-    setLoading(false);
+    try {
+      const workspaceId = await getCurrentWorkspaceId(user.id);
+      const { data, error: queryError } = await supabase.from('draws').select('id,title,draw_type,status,participant_count,winner_count,snapshot_hash,seed_commitment,seed_reveal,created_at,completed_at,draw_winners(id,position,selected_at,draw_entries(display_name,entry_key))').eq('workspace_id', workspaceId).order('created_at', { ascending: false }).limit(100);
+      if (queryError) throw queryError;
+      setItems((data || []) as unknown as HistoryDraw[]);
+      setError('');
+    } catch (caught) {
+      setItems([]);
+      setError(caught instanceof Error ? caught.message : 'Could not load draw history.');
+    } finally {
+      setLoading(false);
+    }
   }, [user]);
 
   useEffect(() => { void load(); }, [load]);
