@@ -216,7 +216,7 @@ export function Chitty() {
       if (drawError) throw new Error(drawError.message);
       if (!draw?.draw_id) throw new Error(draw?.error || 'Could not create the draw snapshot.');
       const participants = eligibleMembers.map((member) => ({ id: member.id, name: member.display_name }));
-      const { data: session, error: sessionError } = await supabase.from('chitty_live_sessions').insert({ group_id: activeGroup.id, round_id: nextRound.id, draw_id: draw.draw_id, participants, status: 'hosted' }).select('id,public_token,status,draw_id').single();
+      const { data: session, error: sessionError } = await supabase.from('chitty_live_sessions').insert({ group_id: activeGroup.id, round_id: nextRound.id, draw_id: draw.draw_id, participants, status: 'hosted' }).select('id,public_token,status,draw_id,round_id,winner_name,winner_member_id').single();
       if (sessionError) throw sessionError;
       setLiveSession(session);
       setNotice('Live link created. Share it with your members, then mark the draw ready when everyone is watching.');
