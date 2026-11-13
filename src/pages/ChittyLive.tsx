@@ -37,7 +37,7 @@ export function ChittyLive() {
       setRollingName(pool[Math.floor(Math.random() * pool.length)]?.name || '');
     };
     pickName();
-    const ticker = window.setInterval(pickName, 200);
+    const ticker = window.setInterval(pickName, 50);
     return () => window.clearInterval(ticker);
   }, [running, state?.participants, state?.current_name]);
   const confetti = Array.from({ length: 42 }, (_, index) => ({ id: index, left: `${(index * 37) % 100}%`, delay: `${(index % 9) * 0.08}s`, duration: `${2.2 + (index % 5) * 0.35}s`, drift: `${((index * 19) % 180) - 90}px`, rotation: `${(index * 47) % 720}deg` }));
