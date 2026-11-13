@@ -34,15 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authEventReceived = useRef(false);
 
   useEffect(() => {
-if (!supabase) {
-  setAuthLoading(false);
-  return;
-}
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
 
-const client = supabase;
-let active = true;
+    const client = supabase;
+    let active = true;
 
-const { data: listener } = client.auth.onAuthStateChange(
+    const { data: listener } = client.auth.onAuthStateChange(
       (_event, nextSession) => {
         authEventReceived.current = true;
 
@@ -88,7 +88,8 @@ const { data: listener } = client.auth.onAuthStateChange(
       return;
     }
 
-	const client = supabase;
+    const client = supabase;
+    const userId = session.user.id;
     let active = true;
 
     setProfileLoading(true);
