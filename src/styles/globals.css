@@ -71,3 +71,19 @@
 @keyframes livePulse { 50% { opacity: .45; transform: scale(.82); } }
 @media (max-width: 680px) { .live-link-copy { flex-direction: column; }.live-link-copy .button { width: 100%; justify-content: center; }.live-host-actions { align-items: stretch; flex-direction: column; }.live-host-actions .button { width: 100%; }.live-stage-meta { flex-direction: column; align-items: center; }.chitty-live-stage { min-height: 300px; border-radius: 20px; }.live-audience-list > div:first-child { flex-direction: column; } }
 @media (prefers-reduced-motion: reduce) { .live-running-label i, .live-indicator i { animation: none; } }
+
+/* Fast live-name reveal and winner celebration */
+.live-name-reveal { min-height: 145px; }
+.live-name-reveal span { display: inline-block; text-shadow: 0 8px 40px rgba(167,139,250,.22); }
+.live-celebration { position: relative; isolation: isolate; padding: 12px 0 4px; }
+.live-celebration > :not(.live-confetti) { position: relative; z-index: 2; }
+.live-confetti { position: absolute; z-index: 1; inset: -65px -20px -20px; overflow: hidden; pointer-events: none; }
+.live-confetti i { position: absolute; top: -18px; width: 8px; height: 13px; border-radius: 2px; background: hsl(calc(var(--confetti-hue, 260) + 1deg), 90%, 68%); animation: winnerConfetti linear infinite; }
+.live-confetti i:nth-child(4n) { background: #fbbf24; width: 6px; height: 9px; }
+.live-confetti i:nth-child(4n + 1) { background: #a78bfa; border-radius: 50%; }
+.live-confetti i:nth-child(4n + 2) { background: #34d399; }
+.live-confetti i:nth-child(4n + 3) { background: #f472b6; width: 5px; height: 12px; }
+.live-congrats { display: inline-flex; align-items: center; justify-content: center; gap: 12px; margin: 12px auto 4px; padding: 11px 18px; border: 1px solid rgba(250,204,21,.3); border-radius: 999px; color: #fde68a; background: linear-gradient(100deg, rgba(245,158,11,.13), rgba(167,139,250,.13)); font-size: 12px; font-weight: 900; letter-spacing: .14em; box-shadow: 0 0 36px rgba(245,158,11,.1); }
+.live-celebration .live-winner-icon { box-shadow: 0 0 0 10px rgba(245,158,11,.035), 0 0 55px rgba(245,158,11,.16); }
+@keyframes winnerConfetti { 0% { transform: translate3d(0, -20px, 0) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate3d(var(--confetti-drift, 0), 520px, 0) rotate(var(--confetti-rotation, 360deg)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .live-confetti i { animation: none; display: none; } }

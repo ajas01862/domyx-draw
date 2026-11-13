@@ -219,7 +219,7 @@ export function Chitty() {
         const member = eligibleMembers[index];
         const { error: tickError } = await supabase.from('chitty_live_sessions').update({ current_index: index, current_name: member.display_name, updated_at: new Date().toISOString() }).eq('id', liveSession.id);
         if (tickError) throw tickError;
-        await new Promise((resolve) => window.setTimeout(resolve, 850));
+        await new Promise((resolve) => window.setTimeout(resolve, 500));
       }
       const { data: result, error: executeError } = await supabase.functions.invoke('execute-draw', { body: { draw_id: liveSession.draw_id } });
       if (executeError) throw new Error(executeError.message);
