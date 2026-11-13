@@ -215,17 +215,12 @@ export function Chitty() {
       const { error: runningError } = await supabase.from('chitty_live_sessions').update({ status: 'running', current_index: -1, current_name: 'The selection is starting…', updated_at: new Date().toISOString() }).eq('id', liveSession.id);
       if (runningError) throw runningError;
       setLiveSession({ ...liveSession, status: 'running' });
-      for (let index = 0; index < eligibleMembers.length; index += 1) {
-        const member = eligibleMembers[index];
-        const { error: tickError } = await supabase.from('chitty_live_sessions').update({ current_index: index, current_name: member.display_name, updated_at: new Date().toISOString() }).eq('id', liveSession.id);
-        if (tickError) throw tickError;
-        await new Promise((resolve) => window.setTimeout(resolve, 500));
-      }
       const { data: result, error: executeError } = await supabase.functions.invoke('execute-draw', { body: { draw_id: liveSession.draw_id } });
       if (executeError) throw new Error(executeError.message);
       const winnerKey = result?.winners?.[0]?.entry_key;
       const winner = eligibleMembers.find((member) => member.id === winnerKey);
       if (!winner) throw new Error(result?.error || 'The server returned an unknown winner.');
+      await new Promise((resolve) => window.setTimeout(resolve, 4500));
       const payout = Number(activeGroup.contribution_amount) * activeMembers.length;
       const { error: completionError } = await supabase.rpc('complete_chitty_round', { p_round_id: nextRound.id, p_member_id: winner.id, p_amount: payout, p_draw_id: liveSession.draw_id });
       if (completionError) throw completionError;

@@ -87,3 +87,39 @@
 .live-celebration .live-winner-icon { box-shadow: 0 0 0 10px rgba(245,158,11,.035), 0 0 55px rgba(245,158,11,.16); }
 @keyframes winnerConfetti { 0% { transform: translate3d(0, -20px, 0) rotate(0); opacity: 0; } 10% { opacity: 1; } 100% { transform: translate3d(var(--confetti-drift, 0), 520px, 0) rotate(var(--confetti-rotation, 360deg)); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .live-confetti i { animation: none; display: none; } }
+
+/* Rapid live Chitty name ticker */
+.live-rapid-reveal {
+  min-height: 160px;
+  margin: 18px 0 10px;
+  padding: 18px;
+  border: 1px solid rgba(167, 139, 250, .24);
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 0%, rgba(139, 92, 246, .2), rgba(15, 23, 42, .25) 72%);
+  box-shadow: 0 18px 70px rgba(76, 29, 149, .18), inset 0 1px rgba(255, 255, 255, .06);
+}
+.live-rapid-reveal span {
+  text-align: center;
+  text-shadow: 0 0 28px rgba(167, 139, 250, .28);
+}
+.live-rolling-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #c4b5fd;
+  font-size: 12px;
+}
+.live-rolling-indicator i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a78bfa;
+  animation: liveTickerDot .65s ease-in-out infinite alternate;
+}
+.live-rolling-indicator i:nth-child(2) { animation-delay: .16s; }
+.live-rolling-indicator i:nth-child(3) { animation-delay: .32s; margin-right: 5px; }
+@keyframes liveTickerDot {
+  from { opacity: .35; transform: translateY(2px) scale(.8); }
+  to { opacity: 1; transform: translateY(-2px) scale(1.2); }
+}
