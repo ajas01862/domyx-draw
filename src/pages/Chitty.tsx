@@ -1,6 +1,6 @@
 import type { FormEvent } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, CheckCircle2, CircleDollarSign, Clock3, History, Phone, Plus, RefreshCw, Trophy, Users } from 'lucide-react';
+import { CalendarDays, CheckCircle2, CircleDollarSign, Clock3, Copy, ExternalLink, History, Phone, Plus, RefreshCw, Radio, Trophy, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { getCurrentWorkspaceId } from '../lib/workspace';
@@ -41,6 +41,8 @@ export function Chitty() {
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [memberName, setMemberName] = useState('');
   const [phone, setPhone] = useState('');
+  const [liveSession, setLiveSession] = useState<{ id: string; public_token: string; status: string; draw_id: string } | null>(null);
+  const [liveBusy, setLiveBusy] = useState(false);
 
   const activeGroup = groups.find((group) => group.id === selected);
   const activeMembers = members.filter((member) => member.status === 'active');
@@ -49,6 +51,7 @@ export function Chitty() {
   const wonMemberIds = useMemo(() => new Set(allocations.map((allocation) => allocation.member_id)), [allocations]);
   const eligibleMembers = activeMembers.filter((member) => !wonMemberIds.has(member.id));
   const nextRound = rounds.find((round) => round.status !== 'completed' && round.status !== 'cancelled');
+  const liveUrl = liveSession ? `${window.location.origin}${import.meta.env.BASE_URL}chitty/live/${liveSession.public_token}` : '';
 
   const loadGroups = useCallback(async () => {
     if (!supabase || !user) return;
@@ -79,6 +82,12 @@ export function Chitty() {
     else setMembers((memberResult.data || []) as Member[]);
     if (roundResult.error) setError(roundResult.error.message);
     else setRounds((roundResult.data || []) as Round[]);
+    const upcomingRound = ((roundResult.data || []) as Round[]).find((round) => round.status !== 'completed' && round.status !== 'cancelled');
+    if (upcomingRound) {
+      const { data: liveData, error: liveError } = await supabase.from('chitty_live_sessions').select('id,public_token,status,draw_id').eq('round_id', upcomingRound.id).maybeSingle();
+      if (liveError) setError(liveError.message);
+      else setLiveSession(liveData as { id: string; public_token: string; status: string; draw_id: string } | null);
+    } else setLiveSession(null);
     if (allocationResult.error) setError(allocationResult.error.message);
     else {
       const roundIds = new Set((roundResult.data || []).map((round) => round.id));
@@ -167,38 +176,69 @@ export function Chitty() {
     setBusy(false);
   };
 
-  const runMonthlyDraw = async () => {
+  const createLiveLink = async () => {
     if (!supabase || !user || !activeGroup || !nextRound) return;
-    if (activeMembers.length < 2) { setError('Add at least two active members before running a draw.'); return; }
-    if (eligibleMembers.length < 2) { setError('Every eligible member has already received a payout. Start a new cycle or reset the winner history.'); return; }
-    setBusy(true); setError(''); setNotice('');
+    if (eligibleMembers.length < 2) { setError('At least two eligible members are required.'); return; }
+    setLiveBusy(true); setError(''); setNotice('');
     try {
       await ensureRoundContributions(nextRound);
-      const { data: roundPayments, error: paymentError } = await supabase.from('chitty_contributions').select('status,expected_amount,paid_amount').eq('round_id', nextRound.id);
+      const { data: payments, error: paymentError } = await supabase.from('chitty_contributions').select('status,expected_amount,paid_amount').eq('round_id', nextRound.id);
       if (paymentError) throw paymentError;
-      const unpaid = (roundPayments || []).filter((payment) => payment.status !== 'paid' || Number(payment.paid_amount) < Number(payment.expected_amount));
-      if (unpaid.length) throw new Error(`${unpaid.length} member contribution(s) are still unpaid. Record all payments before running this round's draw.`);
-      const { data: workspaceRows, error: workspaceError } = await supabase.from('workspace_members').select('workspace_id,role').eq('user_id', user.id).in('role', ['owner', 'admin', 'organizer']).order('joined_at', { ascending: true }).limit(1);
-      if (workspaceError) throw workspaceError;
-      const workspaceId = workspaceRows?.[0]?.workspace_id;
-      if (!workspaceId) throw new Error('Your account does not have draw permission in a workspace.');
-      const { data: created, error: createError } = await supabase.functions.invoke('create-draw', { body: { workspace_id: workspaceId, title: `${activeGroup.name} · Round ${nextRound.round_number}`, draw_type: 'chitty', winner_count: 1, entries: eligibleMembers.map((member) => ({ entry_key: member.id, display_name: member.display_name })) } });
-      if (createError) throw new Error(createError.message);
-      if (!created?.draw_id) throw new Error(created?.error || 'Could not create the monthly draw.');
-      const { data: result, error: executeError } = await supabase.functions.invoke('execute-draw', { body: { draw_id: created.draw_id } });
+      const unpaid = (payments || []).filter((row) => row.status !== 'paid' || Number(row.paid_amount) < Number(row.expected_amount));
+      if (unpaid.length) throw new Error(`${unpaid.length} contribution(s) are still unpaid. Complete payment tracking before preparing the live draw.`);
+      const workspaceId = await getCurrentWorkspaceId(user.id);
+      const { data: draw, error: drawError } = await supabase.functions.invoke('create-draw', { body: { workspace_id: workspaceId, title: `${activeGroup.name} · Round ${nextRound.round_number}`, draw_type: 'chitty', winner_count: 1, entries: eligibleMembers.map((member) => ({ entry_key: member.id, display_name: member.display_name })) } });
+      if (drawError) throw new Error(drawError.message);
+      if (!draw?.draw_id) throw new Error(draw?.error || 'Could not create the draw snapshot.');
+      const participants = eligibleMembers.map((member) => ({ id: member.id, name: member.display_name }));
+      const { data: session, error: sessionError } = await supabase.from('chitty_live_sessions').insert({ group_id: activeGroup.id, round_id: nextRound.id, draw_id: draw.draw_id, participants, status: 'hosted' }).select('id,public_token,status,draw_id').single();
+      if (sessionError) throw sessionError;
+      setLiveSession(session);
+      setNotice('Live link created. Share it with your members, then mark the draw ready when everyone is watching.');
+    } catch (caught) { setError(errorMessage(caught)); }
+    finally { setLiveBusy(false); }
+  };
+
+  const setLiveReady = async () => {
+    if (!supabase || !liveSession) return;
+    setLiveBusy(true); setError('');
+    const { error: updateError } = await supabase.from('chitty_live_sessions').update({ status: 'ready', updated_at: new Date().toISOString() }).eq('id', liveSession.id);
+    if (updateError) setError(updateError.message);
+    else { setLiveSession({ ...liveSession, status: 'ready' }); setNotice('Draw is ready. Press Start live draw when you are ready.'); }
+    setLiveBusy(false);
+  };
+
+  const startLiveDraw = async () => {
+    if (!supabase || !user || !activeGroup || !nextRound || !liveSession) return;
+    setLiveBusy(true); setError(''); setNotice('');
+    try {
+      const { error: runningError } = await supabase.from('chitty_live_sessions').update({ status: 'running', current_index: -1, current_name: 'The selection is starting…', updated_at: new Date().toISOString() }).eq('id', liveSession.id);
+      if (runningError) throw runningError;
+      setLiveSession({ ...liveSession, status: 'running' });
+      for (let index = 0; index < eligibleMembers.length; index += 1) {
+        const member = eligibleMembers[index];
+        const { error: tickError } = await supabase.from('chitty_live_sessions').update({ current_index: index, current_name: member.display_name, updated_at: new Date().toISOString() }).eq('id', liveSession.id);
+        if (tickError) throw tickError;
+        await new Promise((resolve) => window.setTimeout(resolve, 850));
+      }
+      const { data: result, error: executeError } = await supabase.functions.invoke('execute-draw', { body: { draw_id: liveSession.draw_id } });
       if (executeError) throw new Error(executeError.message);
-      const winnerEntryKey = result?.winners?.[0]?.entry_key;
-      const winnerName = result?.winners?.[0]?.display_name;
-      if (!winnerName || !winnerEntryKey) throw new Error(result?.error || 'The draw did not return a verifiable member identifier.');
-      const winner = eligibleMembers.find((member) => member.id === winnerEntryKey);
-      if (!winner) throw new Error('The winner could not be matched to a group member. No payout allocation was created.');
+      const winnerKey = result?.winners?.[0]?.entry_key;
+      const winner = eligibleMembers.find((member) => member.id === winnerKey);
+      if (!winner) throw new Error(result?.error || 'The server returned an unknown winner.');
       const payout = Number(activeGroup.contribution_amount) * activeMembers.length;
-      const { error: completionError } = await supabase.rpc('complete_chitty_round', { p_round_id: nextRound.id, p_member_id: winner.id, p_amount: payout, p_draw_id: created.draw_id });
+      const { error: completionError } = await supabase.rpc('complete_chitty_round', { p_round_id: nextRound.id, p_member_id: winner.id, p_amount: payout, p_draw_id: liveSession.draw_id });
       if (completionError) throw completionError;
+      const { error: finishError } = await supabase.from('chitty_live_sessions').update({ status: 'completed', winner_member_id: winner.id, winner_name: winner.display_name, current_name: winner.display_name, updated_at: new Date().toISOString() }).eq('id', liveSession.id);
+      if (finishError) throw finishError;
+      setLiveSession({ ...liveSession, status: 'completed' });
       setNotice(`Round ${nextRound.round_number} winner: ${winner.display_name}. Payout: ${payout.toFixed(3)} BHD.`);
       await loadDetails(); await loadContributions();
-    } catch (caught) { setError(errorMessage(caught)); }
-    finally { setBusy(false); }
+    } catch (caught) {
+      setError(errorMessage(caught));
+      await supabase.from('chitty_live_sessions').update({ status: 'ready', updated_at: new Date().toISOString() }).eq('id', liveSession.id);
+      setLiveSession({ ...liveSession, status: 'ready' });
+    } finally { setLiveBusy(false); }
   };
 
   const memberById = (id: string) => members.find((member) => member.id === id)?.display_name || 'Former member';
@@ -213,8 +253,9 @@ export function Chitty() {
     {activeGroup && <>
       <section className="panel"><div className="panel-heading"><div><h2>Members & contact details</h2><p>{activeMembers.length} active members · Add a name and mobile number separately</p></div><Users size={20} /></div><form className="chitty-member-form" onSubmit={addMember}><label><span>Member name</span><input value={memberName} onChange={(event) => setMemberName(event.target.value)} placeholder="Enter full name" autoComplete="name" required maxLength={100} /></label><label><span>Phone number</span><div className="phone-input"><Phone size={16} /><input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="+973 3XXX XXXX" maxLength={20} /></div></label><button className="button button-primary" disabled={busy}><Plus size={16} /> Add member</button></form>{members.length ? <div className="table-wrap"><table><thead><tr><th>MEMBER</th><th>PHONE NUMBER</th><th>STATUS</th><th>WIN HISTORY</th></tr></thead><tbody>{members.map((member) => <tr key={member.id}><td><strong>{member.display_name}</strong></td><td>{member.contact || '—'}</td><td><span className={`status-pill status-${member.status}`}>{member.status}</span></td><td>{wonMemberIds.has(member.id) ? <span className="status-pill status-completed">Previous winner</span> : 'Eligible'}</td></tr>)}</tbody></table></div> : <div className="empty-state">Add members to create the contribution schedule.</div>}</section>
       <section className="panel"><div className="panel-heading"><div><h2>Monthly rounds</h2><p>Each round collects contributions and selects one eligible payout recipient.</p></div><CalendarDays size={20} /></div>{rounds.length ? <div className="table-wrap"><table><thead><tr><th>ROUND</th><th>SCHEDULED</th><th>STATUS</th><th>PAYOUT</th></tr></thead><tbody>{rounds.map((round) => { const allocation = allocations.find((row) => row.round_id === round.id); return <tr key={round.id}><td><strong>Round {round.round_number}</strong></td><td>{round.scheduled_at ? formatDate(round.scheduled_at) : 'Not scheduled'}</td><td><span className={`status-pill status-${round.status}`}>{round.status}</span></td><td>{allocation ? <strong>{memberById(allocation.member_id)} · {Number(allocation.amount).toFixed(3)} BHD</strong> : 'Pending'}</td></tr>; })}</tbody></table></div> : <div className="empty-state">No rounds scheduled.</div>}
-        {nextRound && <div className="chitty-draw-action"><div><span className="section-kicker">NEXT PAYOUT</span><h3>Round {nextRound.round_number}</h3><p>{eligibleMembers.length} eligible members. {wonMemberIds.size} previous winners excluded.</p></div><button className="button button-primary" onClick={() => void runMonthlyDraw()} disabled={busy || eligibleMembers.length < 2 || activeMembers.length < 2}><Trophy size={16} /> {busy ? 'Processing…' : 'Run monthly draw'}</button></div>}
+        {nextRound && <div className="chitty-draw-action"><div><span className="section-kicker">NEXT PAYOUT</span><h3>Round {nextRound.round_number}</h3><p>{eligibleMembers.length} eligible members. {wonMemberIds.size} previous winners excluded.</p></div><span className="status-pill status-ready">Create a live link to begin</span></div>}
       </section>
+      {nextRound && <section className="panel chitty-host-panel"><div className="panel-heading"><div><span className="section-kicker">HOST A LIVE DRAW</span><h2>Share the moment</h2><p>Create a private host link first, invite members to watch, then prepare and start the selection.</p></div><Radio size={20} /></div>{!liveSession ? <button className="button button-primary" onClick={() => void createLiveLink()} disabled={liveBusy || eligibleMembers.length < 2}><Plus size={16} /> {liveBusy ? 'Creating link…' : 'Create live link'}</button> : <><div className="live-link-copy"><input readOnly value={liveUrl} aria-label="Shareable live draw link" /><button className="button button-secondary" onClick={() => { void navigator.clipboard.writeText(liveUrl); setNotice('Live link copied.'); }}><Copy size={16} /> Copy link</button><a className="button button-secondary" href={liveUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Preview</a></div><div className="live-host-steps"><span className={liveSession.status === 'hosted' ? 'current' : 'done'}>1. Link created</span><span className={liveSession.status === 'ready' || liveSession.status === 'running' || liveSession.status === 'completed' ? 'done' : ''}>2. Draw ready</span><span className={liveSession.status === 'running' || liveSession.status === 'completed' ? 'done' : ''}>3. Live selection</span></div><div className="live-host-actions">{liveSession.status === 'hosted' && <button className="button button-primary" onClick={() => void setLiveReady()} disabled={liveBusy}>Mark draw ready</button>}{liveSession.status === 'ready' && <button className="button button-primary" onClick={() => void startLiveDraw()} disabled={liveBusy}><Trophy size={16} /> {liveBusy ? 'Selecting…' : 'Start live draw'}</button>}{liveSession.status === 'running' && <span className="live-running-label"><i /> Live selection in progress</span>}{liveSession.status === 'completed' && <span className="status-pill status-completed">Winner recorded</span>}</div></>}</section>}
       {nextRound && <section className="panel"><div className="panel-heading"><div><h2>Contribution tracking</h2><p>Mark each member as paid for the upcoming round.</p></div><CircleDollarSign size={20} /></div><div className="chitty-metrics"><div><span>Collected</span><strong>{paidTotal.toFixed(3)} BHD</strong></div><div><span>Expected</span><strong>{expectedTotal.toFixed(3)} BHD</strong></div><div><span>Outstanding</span><strong>{Math.max(0, expectedTotal - paidTotal).toFixed(3)} BHD</strong></div></div>{contributions.length ? <div className="table-wrap"><table><thead><tr><th>MEMBER</th><th>EXPECTED</th><th>PAID</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{contributions.map((row) => <tr key={row.id}><td>{memberById(row.member_id)}</td><td>{Number(row.expected_amount).toFixed(3)}</td><td>{Number(row.paid_amount).toFixed(3)}</td><td>{row.status}</td><td><button className="button button-small button-secondary" disabled={busy} onClick={() => void markPayment(row, row.status !== 'paid')}>{row.status === 'paid' ? 'Undo payment' : 'Mark paid'}</button></td></tr>)}</tbody></table></div> : <div className="empty-state"><Clock3 size={20} /><p>Contribution records will be generated when you prepare the next monthly draw.</p></div>}</section>}
       <section className="panel"><div className="panel-heading"><div><h2>Payout history</h2><p>Previous winners are excluded from future rounds in this group.</p></div><History size={20} /></div>{allocations.length ? <div className="activity-list">{allocations.map((allocation) => { const round = rounds.find((row) => row.id === allocation.round_id); return <div className="activity-row" key={allocation.id}><div className="activity-info"><strong><Trophy size={15} /> {memberById(allocation.member_id)}</strong><span>Round {round?.round_number ?? '—'} · {formatDate(allocation.allocated_at)}</span></div><strong>{Number(allocation.amount).toFixed(3)} BHD</strong></div>; })}</div> : <div className="empty-state"><CheckCircle2 size={20} /><p>No payouts yet. The first completed monthly draw will appear here.</p></div>}</section>
     </>}
