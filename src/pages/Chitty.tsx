@@ -265,10 +265,11 @@ export function Chitty() {
       if (completionError) throw completionError;
       const { error: finishError } = await supabase.from('chitty_live_sessions').update({ status: 'completed', winner_member_id: winner.id, winner_name: winner.display_name, current_name: winner.display_name, updated_at: new Date().toISOString() }).eq('id', liveSession.id);
       if (finishError) throw finishError;
+      await loadDetails();
+      await loadContributions();
       setLiveSession({ ...liveSession, status: 'completed', winner_name: winner.display_name });
       setWinnerResult({ name: winner.display_name, roundId: nextRound.id, amount: payout });
       setNotice(`Round ${nextRound.round_number} winner: ${winner.display_name}. Payout: ${payout.toFixed(3)} BHD.`);
-      await loadDetails(); await loadContributions();
     } catch (caught) {
       setError(errorMessage(caught));
       await supabase.from('chitty_live_sessions').update({ status: 'ready', updated_at: new Date().toISOString() }).eq('id', liveSession.id);
