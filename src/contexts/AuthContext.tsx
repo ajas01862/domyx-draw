@@ -17,6 +17,7 @@ type AuthValue = {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  sessionLoading: boolean;
   configured: boolean;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
@@ -97,7 +98,7 @@ const { data: listener } = client.auth.onAuthStateChange(
         const { data, error } = await client
           .from('profiles')
           .select('id,username,full_name,avatar_url,is_admin')
-          .eq('id', session.user.id)
+          .eq('id', userId)
           .maybeSingle();
 
         if (error) throw error;
@@ -119,7 +120,7 @@ const { data: listener } = client.auth.onAuthStateChange(
     return () => {
       active = false;
     };
-  }, [session]);
+  }, [session?.user?.id]);
 
   const value = useMemo<AuthValue>(
     () => ({
@@ -127,6 +128,7 @@ const { data: listener } = client.auth.onAuthStateChange(
       user: session?.user ?? null,
       profile,
       loading: authLoading || profileLoading,
+      sessionLoading: authLoading,
       configured: isSupabaseConfigured,
 
       signOut: async () => {
