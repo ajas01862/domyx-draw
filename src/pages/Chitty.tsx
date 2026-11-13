@@ -111,30 +111,16 @@ export function Chitty() {
         .maybeSingle();
       liveData = result.data;
       liveError = result.error;
-    } else {
-      const result = await supabase
-        .from('chitty_live_sessions')
-        .select('id,public_token,status,draw_id,round_id,winner_name,winner_member_id')
-        .eq('group_id', selected)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      liveData = result.data;
-      liveError = result.error;
     }
 
     if (liveError) {
       setError(liveError.message);
     } else if (liveData) {
-      const savedAllocations = (allocationResult.data || []) as Allocation[];
-      const savedMembers = (memberResult.data || []) as Member[];
-      const winnerAllocation = savedAllocations.find((row) => row.round_id === liveData.round_id);
-      const winner = savedMembers.find((member) => member.id === (liveData.winner_member_id || winnerAllocation?.member_id));
-      const restoredWinnerName = liveData.winner_name || (liveData.status === 'completed' ? winner?.display_name : undefined);
-      setLiveSession({ ...liveData, winner_name: restoredWinnerName });
-      if (liveData.status === 'completed' && restoredWinnerName) {
-        setWinnerResult({ name: restoredWinnerName, roundId: liveData.round_id, amount: Number(winnerAllocation?.amount || 0) });
+      if (liveData.status === 'completed') {
+        setLiveSession(null);
+        setWinnerResult(null);
       } else {
+        setLiveSession(liveData);
         setWinnerResult(null);
       }
     } else {
