@@ -44,6 +44,7 @@ export function Chitty() {
   const [liveSession, setLiveSession] = useState<{ id: string; public_token: string; status: string; draw_id: string; round_id: string; winner_name?: string; winner_member_id?: string } | null>(null);
   const [liveBusy, setLiveBusy] = useState(false);
   const [hostRollingName, setHostRollingName] = useState('');
+  const [winnerResult, setWinnerResult] = useState<{ name: string; roundId: string; amount: number } | null>(null);
 
   const activeGroup = groups.find((group) => group.id === selected);
   const activeMembers = members.filter((member) => member.status === 'active');
@@ -111,7 +112,11 @@ export function Chitty() {
       const savedMembers = (memberResult.data || []) as Member[];
       const winnerAllocation = savedAllocations.find((row) => row.round_id === liveData?.round_id);
       const winner = savedMembers.find((member) => member.id === (liveData?.winner_member_id || winnerAllocation?.member_id));
-      setLiveSession(liveData ? { ...liveData, winner_name: liveData.winner_name || (liveData.status === 'completed' ? winner?.display_name : undefined) } : null);
+      const restoredWinnerName = liveData?.winner_name || (liveData?.status === 'completed' ? winner?.display_name : undefined);
+      if (liveData) setLiveSession({ ...liveData, winner_name: restoredWinnerName });
+      if (liveData?.status === 'completed' && restoredWinnerName) {
+        setWinnerResult({ name: restoredWinnerName, roundId: liveData.round_id, amount: Number(winnerAllocation?.amount || 0) });
+      }
     }
     if (allocationResult.error) setError(allocationResult.error.message);
     else {
@@ -252,6 +257,7 @@ export function Chitty() {
       const { error: finishError } = await supabase.from('chitty_live_sessions').update({ status: 'completed', winner_member_id: winner.id, winner_name: winner.display_name, current_name: winner.display_name, updated_at: new Date().toISOString() }).eq('id', liveSession.id);
       if (finishError) throw finishError;
       setLiveSession({ ...liveSession, status: 'completed', winner_name: winner.display_name });
+      setWinnerResult({ name: winner.display_name, roundId: nextRound.id, amount: payout });
       setNotice(`Round ${nextRound.round_number} winner: ${winner.display_name}. Payout: ${payout.toFixed(3)} BHD.`);
       await loadDetails(); await loadContributions();
     } catch (caught) {
@@ -262,9 +268,9 @@ export function Chitty() {
   };
 
   const shareWinnerPicture = async () => {
-    if (!liveSession?.winner_name || !activeGroup) return;
-    const round = rounds.find((item) => item.id === liveSession.round_id);
-    const allocation = allocations.find((item) => item.round_id === liveSession.round_id);
+    if (!winnerResult?.name || !activeGroup) return;
+    const round = rounds.find((item) => item.id === winnerResult.roundId);
+    const allocation = allocations.find((item) => item.round_id === winnerResult.roundId);
     const canvas = document.createElement('canvas');
     canvas.width = 1200;
     canvas.height = 630;
@@ -292,7 +298,7 @@ export function Chitty() {
     context.fillText('Congratulations!', 600, 245);
     context.fillStyle = '#f7d889';
     context.font = '700 54px Arial, sans-serif';
-    const winnerName = liveSession.winner_name.length > 24 ? `${liveSession.winner_name.slice(0, 22)}…` : liveSession.winner_name;
+    const winnerName = winnerResult.name.length > 24 ? `${winnerResult.name.slice(0, 22)}…` : winnerResult.name;
     context.fillText(winnerName, 600, 345);
     context.fillStyle = '#d7e1ef';
     context.font = '400 27px Arial, sans-serif';
@@ -310,7 +316,7 @@ export function Chitty() {
     const file = new File([blob], `domyx-winner-round-${round?.round_number ?? 'result'}.png`, { type: 'image/png' });
     try {
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: `${liveSession.winner_name} - Domyx Draw`, text: `Winner of ${activeGroup.name}` });
+        await navigator.share({ files: [file], title: `${winnerResult.name} - Domyx Draw`, text: `Winner of ${activeGroup.name}` });
         setNotice('Winner picture is ready to share.');
       } else {
         const url = URL.createObjectURL(blob);
@@ -340,7 +346,7 @@ export function Chitty() {
       <section className="panel"><div className="panel-heading"><div><h2>Monthly rounds</h2><p>Each round collects contributions and selects one eligible payout recipient.</p></div><CalendarDays size={20} /></div>{rounds.length ? <div className="table-wrap"><table><thead><tr><th>ROUND</th><th>SCHEDULED</th><th>STATUS</th><th>PAYOUT</th></tr></thead><tbody>{rounds.map((round) => { const allocation = allocations.find((row) => row.round_id === round.id); return <tr key={round.id}><td><strong>Round {round.round_number}</strong></td><td>{round.scheduled_at ? formatDate(round.scheduled_at) : 'Not scheduled'}</td><td><span className={`status-pill status-${round.status}`}>{round.status}</span></td><td>{allocation ? <strong>{memberById(allocation.member_id)} · {Number(allocation.amount).toFixed(3)} BHD</strong> : 'Pending'}</td></tr>; })}</tbody></table></div> : <div className="empty-state">No rounds scheduled.</div>}
         {nextRound && <div className="chitty-draw-action"><div><span className="section-kicker">NEXT PAYOUT</span><h3>Round {nextRound.round_number}</h3><p>{eligibleMembers.length} eligible members. {wonMemberIds.size} previous winners excluded.</p></div><span className="status-pill status-ready">Create a live link to begin</span></div>}
       </section>
-      {activeGroup && <section className="panel chitty-host-panel"><div className="panel-heading"><div><span className="section-kicker">HOST A LIVE DRAW</span><h2>Share the moment</h2><p>Create a private host link first, invite members to watch, then prepare and start the selection.</p></div><Radio size={20} /></div>{!liveSession ? nextRound ? <button className="button button-primary" onClick={() => void createLiveLink()} disabled={liveBusy || eligibleMembers.length < 2}><Plus size={16} /> {liveBusy ? 'Creating link…' : 'Create live link'}</button> : <div className="empty-state">The latest round is complete. The winner record will remain available here.</div> : <><div className="live-link-copy"><input readOnly value={liveUrl} aria-label="Shareable live draw link" /><button className="button button-secondary" onClick={() => { void navigator.clipboard.writeText(liveUrl); setNotice('Live link copied.'); }}><Copy size={16} /> Copy link</button><a className="button button-secondary" href={liveUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Preview</a></div><div className="live-host-steps"><span className={liveSession.status === 'hosted' ? 'current' : 'done'}>1. Link created</span><span className={liveSession.status === 'ready' || liveSession.status === 'running' || liveSession.status === 'completed' ? 'done' : ''}>2. Draw ready</span><span className={liveSession.status === 'running' || liveSession.status === 'completed' ? 'done' : ''}>3. Live selection</span></div><div className="live-host-actions">{liveSession.status === 'hosted' && <button className="button button-primary" onClick={() => void setLiveReady()} disabled={liveBusy}>Mark draw ready</button>}{liveSession.status === 'ready' && <button className="button button-primary" onClick={() => void startLiveDraw()} disabled={liveBusy}><Trophy size={16} /> {liveBusy ? 'Selecting…' : 'Start live draw'}</button>}{liveSession.status === 'running' && <div className="chitty-host-live-reveal"><span className="live-running-label"><i /> LIVE WINNER SELECTION</span><strong key={hostRollingName}>{hostRollingName || 'Selecting…'}</strong><small>Names shuffle every 100 milliseconds</small></div>}{liveSession.status === 'completed' && <div className="chitty-host-live-reveal chitty-host-winner"><span className="live-running-label"><Trophy size={16} /> WINNER SELECTED</span><strong>{liveSession.winner_name || 'Winner recorded'}</strong><small>The payout has been saved successfully.</small><button className="button button-primary" onClick={() => void shareWinnerPicture()}><Share2 size={16} /> Share winner picture</button></div>}</div></>}</section>}
+      {activeGroup && <section className="panel chitty-host-panel"><div className="panel-heading"><div><span className="section-kicker">HOST A LIVE DRAW</span><h2>Share the moment</h2><p>Create a private host link first, invite members to watch, then prepare and start the selection.</p></div><Radio size={20} /></div>{!liveSession ? nextRound ? <button className="button button-primary" onClick={() => void createLiveLink()} disabled={liveBusy || eligibleMembers.length < 2}><Plus size={16} /> {liveBusy ? 'Creating link…' : 'Create live link'}</button> : <div className="empty-state">The latest round is complete. The winner record will remain available here.</div> : <><div className="live-link-copy"><input readOnly value={liveUrl} aria-label="Shareable live draw link" /><button className="button button-secondary" onClick={() => { void navigator.clipboard.writeText(liveUrl); setNotice('Live link copied.'); }}><Copy size={16} /> Copy link</button><a className="button button-secondary" href={liveUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Preview</a></div><div className="live-host-steps"><span className={liveSession.status === 'hosted' ? 'current' : 'done'}>1. Link created</span><span className={liveSession.status === 'ready' || liveSession.status === 'running' || liveSession.status === 'completed' ? 'done' : ''}>2. Draw ready</span><span className={liveSession.status === 'running' || liveSession.status === 'completed' ? 'done' : ''}>3. Live selection</span></div><div className="live-host-actions">{liveSession.status === 'hosted' && <button className="button button-primary" onClick={() => void setLiveReady()} disabled={liveBusy}>Mark draw ready</button>}{liveSession.status === 'ready' && <button className="button button-primary" onClick={() => void startLiveDraw()} disabled={liveBusy}><Trophy size={16} /> {liveBusy ? 'Selecting…' : 'Start live draw'}</button>}{liveSession.status === 'running' && <div className="chitty-host-live-reveal"><span className="live-running-label"><i /> LIVE WINNER SELECTION</span><strong key={hostRollingName}>{hostRollingName || 'Selecting…'}</strong><small>Names shuffle every 100 milliseconds</small></div>}{(winnerResult || liveSession.status === 'completed') && <div className="chitty-host-live-reveal chitty-host-winner"><span className="live-running-label"><Trophy size={16} /> WINNER SELECTED</span><strong>{winnerResult?.name || liveSession.winner_name || 'Winner recorded'}</strong><small>The payout has been saved successfully.</small><button className="button button-primary" onClick={() => void shareWinnerPicture()} disabled={!winnerResult}><Share2 size={16} /> Share winner picture</button></div>}</div></>}</section>}
       {nextRound && <section className="panel"><div className="panel-heading"><div><h2>Contribution tracking</h2><p>Mark each member as paid for the upcoming round.</p></div><CircleDollarSign size={20} /></div><div className="chitty-metrics"><div><span>Collected</span><strong>{paidTotal.toFixed(3)} BHD</strong></div><div><span>Expected</span><strong>{expectedTotal.toFixed(3)} BHD</strong></div><div><span>Outstanding</span><strong>{Math.max(0, expectedTotal - paidTotal).toFixed(3)} BHD</strong></div></div>{contributions.length ? <div className="table-wrap"><table><thead><tr><th>MEMBER</th><th>EXPECTED</th><th>PAID</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{contributions.map((row) => <tr key={row.id}><td>{memberById(row.member_id)}</td><td>{Number(row.expected_amount).toFixed(3)}</td><td>{Number(row.paid_amount).toFixed(3)}</td><td>{row.status}</td><td><button className="button button-small button-secondary" disabled={busy} onClick={() => void markPayment(row, row.status !== 'paid')}>{row.status === 'paid' ? 'Undo payment' : 'Mark paid'}</button></td></tr>)}</tbody></table></div> : <div className="empty-state"><Clock3 size={20} /><p>Contribution records will be generated when you prepare the next monthly draw.</p></div>}</section>}
       <section className="panel"><div className="panel-heading"><div><h2>Payout history</h2><p>Previous winners are excluded from future rounds in this group.</p></div><History size={20} /></div>{allocations.length ? <div className="activity-list">{allocations.map((allocation) => { const round = rounds.find((row) => row.id === allocation.round_id); return <div className="activity-row" key={allocation.id}><div className="activity-info"><strong><Trophy size={15} /> {memberById(allocation.member_id)}</strong><span>Round {round?.round_number ?? '—'} · {formatDate(allocation.allocated_at)}</span></div><strong>{Number(allocation.amount).toFixed(3)} BHD</strong></div>; })}</div> : <div className="empty-state"><CheckCircle2 size={20} /><p>No payouts yet. The first completed monthly draw will appear here.</p></div>}</section>
     </>}
