@@ -97,15 +97,23 @@ export function Chitty() {
     else setMembers((memberResult.data || []) as Member[]);
     if (roundResult.error) setError(roundResult.error.message);
     else setRounds((roundResult.data || []) as Round[]);
-    const upcomingRound = ((roundResult.data || []) as Round[]).find((round) => round.status !== 'completed' && round.status !== 'cancelled');
-    if (upcomingRound) {
-      const { data: liveData, error: liveError } = await supabase.from('chitty_live_sessions').select('id,public_token,status,draw_id').eq('round_id', upcomingRound.id).maybeSingle();
+    const loadedRounds = (roundResult.data || []) as Round[];
+    const upcomingRound = loadedRounds.find((round) => round.status !== 'completed' && round.status !== 'cancelled');
+    const sessionRound = upcomingRound || [...loadedRounds].reverse().find((round) => round.status === 'completed' && round.draw_id);
+    if (sessionRound) {
+      const { data: liveData, error: liveError } = await supabase.from('chitty_live_sessions').select('id,public_token,status,draw_id').eq('round_id', sessionRound.id).maybeSingle();
       if (liveError) setError(liveError.message);
-      else setLiveSession(liveData as { id: string; public_token: string; status: string; draw_id: string } | null);
+      else {
+        const savedAllocations = (allocationResult.data || []) as Allocation[];
+        const savedMembers = (memberResult.data || []) as Member[];
+        const winnerAllocation = savedAllocations.find((row) => row.round_id === sessionRound.id);
+        const winner = savedMembers.find((member) => member.id === winnerAllocation?.member_id);
+        setLiveSession(liveData ? { ...liveData, winner_name: liveData.status === 'completed' ? winner?.display_name : undefined } as { id: string; public_token: string; status: string; draw_id: string; winner_name?: string } : null);
+      }
     } else setLiveSession(null);
     if (allocationResult.error) setError(allocationResult.error.message);
     else {
-      const roundIds = new Set((roundResult.data || []).map((round) => round.id));
+      const roundIds = new Set(loadedRounds.map((round) => round.id));
       setAllocations(((allocationResult.data || []) as Allocation[]).filter((row) => roundIds.has(row.round_id)));
     }
   }, [selected]);
