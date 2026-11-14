@@ -60,7 +60,8 @@ export function CommentPicker() {
 
   const importFile = async (file?: File) => {
     if (!file) return;
-    setRawComments((current) => [current, await file.text()].filter(Boolean).join('\n'));
+    const content = await file.text();
+    setRawComments((current) => [current, content].filter(Boolean).join('\n'));
     setNotice(`${file.name} imported. Review the entries before picking.`);
   };
 
