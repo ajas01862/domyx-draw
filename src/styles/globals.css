@@ -227,3 +227,47 @@
 .comment-picker-note strong{color:#d6d9e4}
 @media(max-width:900px){.comment-platform-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.comment-picker-grid{grid-template-columns:1fr}}
 @media(max-width:520px){.comment-picker-mark{display:none}.comment-platform-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.comment-import-panel,.comment-filter-panel,.comment-winners-panel{padding:15px}.comment-counts{gap:10px}.comment-winner-details small{max-width:180px}}
+
+
+/* Comment picker controls and source metadata */
+.comment-field select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid #30374a;
+  border-radius: 9px;
+  outline: none;
+  color: #f3f4f8;
+  background: #141927;
+  font-size: 12px;
+}
+.comment-field select:focus {
+  border-color: #9b7bff;
+  box-shadow: 0 0 0 3px #8b5cf51c;
+}
+.comment-winners-panel .comment-picker-note {
+  margin-top: 16px;
+}
+.comment-picker-note a {
+  color: #c4b2ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.comment-import-panel .comment-field {
+  margin-bottom: 14px;
+}
+.comment-filter-panel .comment-import-actions {
+  margin-top: auto;
+}
+@media (max-width: 680px) {
+  .comment-filter-panel .comment-import-actions > .button {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+.comment-review-more {
+  margin: 13px 0 0;
+  color: #929bb0;
+  font-size: 11px;
+}

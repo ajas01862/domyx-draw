@@ -109,7 +109,7 @@ Never expose a client-side control for `is_admin`. The profile update policy pre
 - Google OAuth sign-in (after provider setup).
 - Authenticated dashboard with database-backed activity.
 - Random draw creation using pasted names or CSV/text import.
-- Comment Picker at `/dashboard/comment-picker` for Instagram, YouTube, Facebook, X, TikTok and other platforms using pasted comments or CSV/TXT imports. Includes keyword and @mention filters, one-entry-per-user control, multi-winner selection and CSV export.
+- Comment Picker at `/dashboard/comment-picker` for Instagram, YouTube, Facebook, X, TikTok and other platforms using pasted comments or CSV, JSON and TXT imports. Includes post URL/profile attribution, comment review, include/exclude phrase rules, exact-match filtering, @mention and minimum-length filters, reply filtering when source data includes reply flags, per-account or per-comment weighting, multi-winner selection, rerolls and CSV export.
 - Server-side cryptographic random source, weighted entries and no duplicate winners within one draw.
 - Participant snapshot hash and seed commitment/reveal records.
 - Draw result persistence and audit log records.
@@ -163,7 +163,7 @@ Before publishing, confirm the canonical and preview URLs in `index.html` match 
 
 ## Comment Picker import format and API integrations
 
-The Comment Picker accepts plain text (one comment per line), tab-separated username/comment rows, and CSV/TXT uploads. For reliable CSV imports, use columns such as `username,comment`. The current version does not connect directly to social networks or store imported comments on the server. Use official platform exports or authorized data access.
+The Comment Picker accepts plain text (one comment per line), `username: comment` lines, tab-separated username/comment rows, CSV, and JSON arrays/objects. For reliable structured imports, use columns such as `username,comment,isReply,date,url`. It also accepts a post URL and creator/profile name as source attribution, but those fields do not fetch comments. The current version does not connect directly to social networks or store imported comments on the server. Use official platform exports or authorized data access.
 
 Direct imports are provider-specific:
 - YouTube: YouTube Data API access to video comments, subject to API quota and video/comment availability.
