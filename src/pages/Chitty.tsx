@@ -302,7 +302,7 @@ export function Chitty() {
     context.textAlign = 'center';
     context.fillStyle = '#a8c7ff';
     context.font = '600 25px Arial, sans-serif';
-    context.fillText('DOMYX DRAW  •  CHITTY WINNER', 600, 145);
+    context.fillText('DOMYX ACTIVITYDESK  •  CHITTY WINNER', 600, 145);
     context.fillStyle = '#ffffff';
     context.font = '700 66px Arial, sans-serif';
     context.fillText('Congratulations!', 600, 245);
@@ -326,7 +326,7 @@ export function Chitty() {
     const file = new File([blob], `domyx-winner-round-${round?.round_number ?? 'result'}.png`, { type: 'image/png' });
     try {
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: `${winnerResult.name} - Domyx Draw`, text: `Winner of ${activeGroup.name}` });
+        await navigator.share({ files: [file], title: `${winnerResult.name} - Domyx ActivityDesk`, text: `Winner of ${activeGroup.name}` });
         setNotice('Winner picture is ready to share.');
       } else {
         const url = URL.createObjectURL(blob);

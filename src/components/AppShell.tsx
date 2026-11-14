@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Activity, CalendarDays, ChartNoAxesCombined, CircleHelp, Crown, Gift, History, LayoutDashboard, LogOut, Menu, Settings, Shield, Users, X } from 'lucide-react';
+import { Activity, CalendarDays, MessageCircle, ChartNoAxesCombined, CircleHelp, Crown, Gift, History, LayoutDashboard, LogOut, Menu, Settings, Shield, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Brand } from './Brand';
@@ -8,6 +8,7 @@ import { initials } from '../lib/utils';
 const links = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/dashboard/draws', label: 'Draws', icon: Gift },
+  { to: '/dashboard/comment-picker', label: 'Comment picker', icon: MessageCircle },
   { to: '/dashboard/events', label: 'Events', icon: CalendarDays },
   { to: '/dashboard/chitty', label: 'Chitty manager', icon: Users },
   { to: '/dashboard/rooms', label: 'Live rooms', icon: Activity },

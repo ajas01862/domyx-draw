@@ -52,6 +52,6 @@ export function ChittyLive() {
       </section>
       <section className="live-audience-list"><div><span className="section-kicker">ELIGIBLE MEMBERS</span><strong>{state.participants.length} participants</strong></div><div className="live-member-grid">{state.participants.map((member, index) => <span key={member.id} className={index <= state.current_index && running ? 'member-seen' : ''}>{member.name}</span>)}</div></section>
     </>}
-    <footer className="chitty-live-footer">Powered by <strong>Domyx Draw</strong> · Fair, transparent and recorded.</footer>
+    <footer className="chitty-live-footer">Powered by <strong>Domyx ActivityDesk</strong> · Fair, transparent and recorded.</footer>
   </main>;
 }

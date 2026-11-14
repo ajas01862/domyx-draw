@@ -1,0 +1,17 @@
+{
+  "name": "Domyx ActivityDesk",
+  "short_name": "ActivityDesk",
+  "description": "A central workspace for draws, social comment picking, events and communities.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#090b12",
+  "theme_color": "#090b12",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

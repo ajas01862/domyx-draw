@@ -1,6 +1,6 @@
-# Domyx Draw
+# Domyx ActivityDesk
 
-Domyx Draw is a React + TypeScript platform foundation for random draws, events, chitty group management and live rooms. It uses Supabase for authentication, PostgreSQL, Row Level Security, Realtime and Edge Functions. The static frontend is deployed with GitHub Pages.
+Domyx ActivityDesk is a React + TypeScript platform foundation for random draws, events, chitty group management and live rooms. It uses Supabase for authentication, PostgreSQL, Row Level Security, Realtime and Edge Functions. The static frontend is deployed with GitHub Pages.
 
 > **Implementation status:** This repository contains a working public landing page, email/password and Google OAuth UI, authenticated dashboard, database-backed event creation and registration, and a server-side random draw flow. Chitty management, live-room host UI, comment-provider integrations, payment processing and full administration workflows are schema/UI foundations and are not yet complete. Do not advertise those modules as production-ready until their workflows and tests are implemented.
 
@@ -109,6 +109,7 @@ Never expose a client-side control for `is_admin`. The profile update policy pre
 - Google OAuth sign-in (after provider setup).
 - Authenticated dashboard with database-backed activity.
 - Random draw creation using pasted names or CSV/text import.
+- Comment Picker at `/dashboard/comment-picker` for Instagram, YouTube, Facebook, X, TikTok and other platforms using pasted comments or CSV/TXT imports. Includes keyword and @mention filters, one-entry-per-user control, multi-winner selection and CSV export.
 - Server-side cryptographic random source, weighted entries and no duplicate winners within one draw.
 - Participant snapshot hash and seed commitment/reveal records.
 - Draw result persistence and audit log records.
@@ -122,7 +123,7 @@ Never expose a client-side control for `is_admin`. The profile update policy pre
 
 - Chitty group/member/round/contribution management UI and allocation workflow.
 - Live-room host UI, room creation and realtime viewer experience. Schema and guest join function are foundations only.
-- YouTube/Instagram/Facebook comment imports. These require provider credentials, scopes, review/approval and compliant API access.
+- Direct YouTube/Instagram/Facebook/X/TikTok comment fetching through official APIs. The Comment Picker currently supports pasted and CSV/TXT-imported comment data from any platform; automatic fetching requires a separate approved integration for each provider. Never collect comments by scraping private pages or bypassing platform restrictions.
 - Premium checkout, billing webhooks and automatic entitlement lifecycle. Plan records are foundations only.
 - Rate limiting, CAPTCHA/abuse prevention, storage policies, automated backups, monitoring and full security test coverage.
 
@@ -153,3 +154,21 @@ Never expose a client-side control for `is_admin`. The profile update policy pre
 The Chitty manager now supports separate member name and phone fields, monthly round scheduling, per-round contribution tracking, payment status updates, a server-audited monthly draw, payout history, and automatic exclusion of members who have already received a payout in the same group. Monthly draws require all active members' contributions for the current round to be marked paid. Winner selection uses the existing `create-draw` and `execute-draw` Edge Functions; the selected entry key is the member UUID, avoiding ambiguous matching when members share a name.
 
 Before deploying this update, run `supabase/migrations/202611120001_chitty_allocation_permissions.sql` in the Supabase SQL Editor. Then deploy the updated `execute-draw` Edge Function and publish the frontend. The migration adds a transactional round-completion RPC and workspace-scoped allocation management; it does not disable RLS.
+
+\n## Brand, SEO and social previews
+
+The frontend brand is **Domyx ActivityDesk**. The root HTML includes SEO description, canonical URL, Open Graph metadata, Twitter/X large-image card metadata, a web app manifest and a social preview image at `public/og-image.png`.
+
+Before publishing, confirm the canonical and preview URLs in `index.html` match the final public deployment URL. They currently target `https://ajas01862.github.io/domyx-draw/`. Social platforms cache previews; after deployment, use each platform's link-preview debugger to refresh its cached metadata.
+
+## Comment Picker import format and API integrations
+
+The Comment Picker accepts plain text (one comment per line), tab-separated username/comment rows, and CSV/TXT uploads. For reliable CSV imports, use columns such as `username,comment`. The current version does not connect directly to social networks or store imported comments on the server. Use official platform exports or authorized data access.
+
+Direct imports are provider-specific:
+- YouTube: YouTube Data API access to video comments, subject to API quota and video/comment availability.
+- Instagram and Facebook: Meta Graph API permissions and app review for eligible accounts/content.
+- X: X API access and plan-dependent endpoints/limits.
+- TikTok: approved TikTok developer products and scopes; public comment access is not generally available to every app.
+
+Keep provider tokens on a trusted server (for example, Supabase Edge Functions) and never put private API secrets in Vite environment variables or browser code. Implement each connector separately with consent, rate limits, pagination, deletion handling and provider terms compliance.
